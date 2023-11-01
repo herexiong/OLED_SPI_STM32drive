@@ -1,10 +1,12 @@
-#include "./BSP/SPI_OLED/oled_spi.h"
+#include "./BSP/OLED/oled_spi.h"
+#include "./BSP/OLED/oled_front.h"
 
 static SPI_HandleTypeDef SpiHandle;
 static __IO uint32_t  SPITimeout = SPIT_LONG_TIMEOUT;   
 static uint16_t SPI_TIMEOUT_UserCallback(uint8_t errorCode);
-extern const unsigned char F6x8[];
-extern const unsigned char F8X16[];
+
+uint8_t OLED_buffer[8192]={0};
+uint8_t OLED_display[1024]={0};	
 
 static  uint16_t SPI_TIMEOUT_UserCallback(uint8_t errorCode)
 {
@@ -320,4 +322,90 @@ void OLED_SPI_off(void)
 	OLED_WriteCMD(0x8d);//设置DCDC
 	OLED_WriteCMD(0x10);//关闭DCDC
 	OLED_WriteCMD(0xae);//关闭OLED
+}
+/*******************************************************
+*函数名：OLED_DrawBMP
+*功  能：o显示显示BMP图片
+*参  数：128×64起始点坐标(x,y),x的范围0～127，y为页的范围0～7
+*备  注： 低位在前，列行式
+*返  回：无
+********************************************************/
+void OLED_SPI_DrawBMP(unsigned char x0, unsigned char y0,unsigned char x1, unsigned char y1,unsigned char BMP[])
+{ 	
+ unsigned int j=0;
+ unsigned char x,y;
+  
+  if(y1%8==0) y=y1/8;      
+  else y=y1/8+1;
+	for(y=y0;y<y1;y++)
+	{
+		OLED_SPI_set_pos(x0,y);
+    for(x=x0;x<x1;x++)
+	    {      
+	    	OLED_WriteDATA(BMP[j++]);	    	
+	    }
+	}
+} 
+/*******************************************************
+*函数名：drawPoint
+*功  能：画点函数
+*参  数：128×64起始点坐标(x,y),x的范围0～127，y的范围0～63
+*参  数：OLED_buffer是一个128*64大小的数组，需要使用oledTrans函数转为显示数组后才能使用
+*备  注： 低位在前，列行式
+*返  回：无
+********************************************************/
+void drawPoint(uint8_t *OLED_buffer,uint8_t x,uint8_t y){
+	OLED_buffer[y*128+x]=1;
+//	printf("x:%d y:%d\r\n",x,y);
+}
+/*******************************************************
+*函数名：drawNode
+*功  能：画节点函数
+*参  数：128×64起始点坐标(x,y),x的范围0～127，y的范围0～63
+*参  数：OLED_buffer是一个128*64大小的数组，需要使用oledTrans函数转为显示数组后才能使用
+*备  注： 低位在前，列行式
+*返  回：无
+********************************************************/
+void drawNode(uint8_t *OLED_buffer,uint8_t x,uint8_t y){
+	drawPoint(OLED_buffer,x,y);
+	drawPoint(OLED_buffer,x+1,y);
+	drawPoint(OLED_buffer,x,y+1);
+	drawPoint(OLED_buffer,x+1,y+1);
+//	printf("x:%d y:%d\r\n",x,y);
+}
+/*******************************************************
+*函数名：drawAllNode
+*功  能：画出温湿度节点函数
+*参  数：128×64起始点坐标(x,y),x的范围0～127，y的范围0～63
+*参  数：OLED_buffer是一个128*64大小的数组，需要使用oledTrans函数转为显示数组后才能使用
+*备  注：根据数组的数据，画出对应位置的节点
+*返  回：无
+********************************************************/
+uint8_t drawAllNode(uint8_t *temp,uint8_t *OLED_buffer){
+	
+	for(uint8_t i=0;i<10;i++){	
+		if(temp[i]>35||temp[i]<10) continue;//return 0; ///<Error
+		drawNode(OLED_buffer,i*12,52-(temp[i]-10)*2);
+//		printf("Node x:%d y:%d\r\n",i*12,52-(temp[i]-10)*2);
+//		printf("\r\n");
+	}
+	return 1;
+}
+/*******************************************************
+*函数名：oledTrans
+*功  能：数组转换
+*参  数：OLED_buffer是一个128*64大小的数组，需要使用oledTrans函数转为显示数组后才能使用
+*参  数：OLED_display个128*8大小的数组，按照每页8个像素分为一个字节
+*备  注：使用此函数可以先便捷的操作OLED_buffer数组，再按照屏幕显示的要求转为OLED_display数组
+*返  回：无
+********************************************************/
+void oledTrans(uint8_t *OLED_buffer,uint8_t *OLED_display){
+	for(uint8_t page=0;page<8;page++){
+		for(uint8_t column=0;column<128;column++){
+			for(uint8_t c=0;c<8;c++){
+				OLED_display[column+page*128] <<=1;
+				OLED_display[column+page*128] |= OLED_buffer[page*1024+column+(8-c)*128];
+			}
+		}
+	}
 }

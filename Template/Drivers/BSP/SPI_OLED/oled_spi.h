@@ -4,6 +4,11 @@ OLED驱动程序
 基于SPI通讯协议
 使用与七线OLED模块，分辨率128*64
 使用4线SPI通讯
+修改历史
+* V1.1 2023/11/01
+	添加了画点函数，可以使用画点函数在对应位置画点，然后将其转换为显示数组显示
+	先通过画点函数操作屏幕上的像素，然后将像素转换通过显示BMP图像的方式显示
+	现在可以按坐标随意操作屏幕像素
 ****************************************************************************************/
 #ifndef __SPI_OLED_H
 #define __SPI_OLED_H
@@ -97,6 +102,11 @@ DC-> LOW-commd HIGH-data
                                           if(OLED_DEBUG_ON)\
                                           printf("<<-OLED-DEBUG->> [%d]"fmt"\n",__LINE__, ##arg);\
                                           }while(0)
+/******************************************缓冲区**************************************************/
+//uint8_t OLED_buffer[8192];
+//uint8_t OLED_display[1024];				
+extern uint8_t OLED_buffer[8192];
+extern uint8_t OLED_display[1024];										  
 /*******************************************函数声明***********************************************/
 void OLED_SPI_init(void);
 										  
@@ -110,9 +120,15 @@ void OLED_SPI_set_pos(uint8_t x, uint8_t y);
 										  
 void OLED_SPI_dis_char(uint8_t x, uint8_t y, uint8_t str,uint8_t size);
 void OLED_SPI_dis_str(uint8_t x, uint8_t y, uint8_t *str, uint8_t size);
+void OLED_SPI_DrawBMP(unsigned char x0, unsigned char y0,unsigned char x1, unsigned char y1,unsigned char BMP[]);								  
 										  
 void OLED_SPI_full(void);
 void OLED_SPI_clear(void);										  
 void OLED_SPI_on(void);
-void OLED_SPI_off(void);										  
+void OLED_SPI_off(void);	
+
+void drawPoint(uint8_t *OLED_buffer,uint8_t x,uint8_t y);
+void drawNode(uint8_t *OLED_buffer,uint8_t x,uint8_t y);
+uint8_t drawAllNode(uint8_t *temp,uint8_t *OLED_buffer);
+void oledTrans(uint8_t *OLED_buffer,uint8_t *OLED_display);										  
 #endif
